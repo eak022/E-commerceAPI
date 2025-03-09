@@ -23,13 +23,17 @@ exports.createCart = async (req, res) => {
   }
 
   try {
-    const existingItem = await CartModel.findOne({ email });
+    // ค้นหาสินค้าตามชื่อและอีเมล
+    const existingItem = await CartModel.findOne({ name, email });
+
     if (existingItem) {
+      // ถ้าพบสินค้าในตะกร้าแล้ว ให้เพิ่มจำนวนสินค้า
       existingItem.quantity += quantity;
       const updatedItem = await existingItem.save();
       return res.json(updatedItem);
     }
 
+    // ถ้าไม่พบสินค้าในตะกร้า ให้สร้างรายการใหม่
     const cart = new CartModel({
       name,
       price,

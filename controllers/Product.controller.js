@@ -105,6 +105,25 @@ exports.getProductById = async (req, res) => {
   }
 };
 
+// ฟังก์ชันค้นหาสินค้าตามชื่อ
+exports.getProductByName = async (req, res) => {
+  try {
+    const { name } = req.params; // รับค่าชื่อจาก URL
+    const product = await ProductModel.findOne({ name });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+
+
+
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
   if (!id)

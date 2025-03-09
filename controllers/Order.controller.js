@@ -1,15 +1,16 @@
 const OrderModel = require("../models/Order");
-
-exports.getAllOrder = async (req, res) => {
+const ProductModel = require("../models/Product"); // Import Product Model
+exports.getOrder = async (req, res) => {
+  /**
+     #swagger.tags = ['Order']
+     #swagger.summary = "Get all Orders"
+     #swagger.description = 'Endpoint to get all orders with product details'
+  */
   try {
-    const order = await OrderModel.find().populate("products.productId");
-    console.log(order);
+    const order = await OrderModel.find().populate("products.productId"); // ใช้ populate เพื่อดึงข้อมูลสินค้า จาก ProductModel มาแสดง ใน OrderModel  ด้วย ref ที่เราได้กำหนดไว้ ใน OrderModel
     res.json(order);
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send({
-      message: "An error occurred while fetching products",
-    });
+    res.status(500).send({ message: "Error retrieving orders" });
   }
 };
 
@@ -28,6 +29,7 @@ exports.getOrderById = async (req, res) => {
       .json({ message: "An error occurred while fetching order details" });
   }
 };
+
 
 exports.deleteOrder = async (req, res) => {
   const { id } = req.params;

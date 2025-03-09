@@ -7,12 +7,12 @@ const OrderSchema = new Schema(
     customerId: { type: String, required: true },
     products: [
       {
-        productId: {
-          type: Schema.Types.ObjectId,
-          ref: "Product",
-          required: true,
-        },
+        productId: { type: String, required: false },
+        image:{ type: String, required: true},
+        productName: { type: String, required: true },
         quantity: { type: Number, required: true, default: 1 },
+        unitPrice:{ type: Number, required: true },
+
       },
     ],
     subtotal: { type: String, required: true },
