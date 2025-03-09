@@ -1,122 +1,128 @@
+
 const CartModel = require("../models/Cart");
 
-exports.createCart = async (req, res) => {
-  const { productId, name, email, image, quantity, price } = req.body;
-  if (!productId || !name || !email || !image || !quantity || !price) {
-    return res.status(400).json({ message: "Product information is missing" });
-  }
+// 📌 GET /cart - ดึงสินค้าทั้งหมดในตะกร้า
+exports.getAllCarts = async (req, res) => {
   try {
-    //Existing item in out cart
-    const existingItem = await CartModel.findOne({ productId, email });
+    const carts = await CartModel.find();
+    res.json(carts);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to get cart items." });
+  }
+};
+
+// 📌 POST /carts - เพิ่มสินค้าไปยังตะกร้า
+exports.createCart = async (req, res) => {
+  const { name, price, image, quantity, email } = req.body;
+  console.log("Received data:", req.body);
+
+  if (!name || !price || !image || !quantity || !email) {
+    return res.status(400).json({ message: "Product information is missing!" });
+  }
+
+  try {
+    const existingItem = await CartModel.findOne({ email });
     if (existingItem) {
       existingItem.quantity += quantity;
-      const data = await existingItem.save();
-      return res.send(data);
+      const updatedItem = await existingItem.save();
+      return res.json(updatedItem);
     }
-    //add item to cart for the first timee
+
     const cart = new CartModel({
-      productId,
       name,
-      email,
+      price,
       image,
       quantity,
-      price,
+      email,
     });
-    const data = await cart.save();
-    res.send(data);
+    const newItem = await cart.save();
+    res.status(201).json(newItem);
   } catch (error) {
-    res.status(500).json({
-      message:
-        error.message || "Something error occurred white adding new cart item",
-    });
+    console.error("Error during cart creation:", error);
+    res.status(500).json({ message: error.message || "Something went wrong!" });
   }
 };
 
-exports.getAllCartItems = async (req, res) => {
-  try {
-    const cartItems = await CartModel.find();
 
-    if (!cartItems || cartItems.length === 0) {
-      return res.status(404).json({ message: "No cart items found" });
-    }
-
-    return res.json(cartItems);
-  } catch (error) {
-    return res.status(500).json({
-      message: error.message || "Something went wrong while getting cart items",
-    });
-  }
-};
-
-exports.getCartItemsByEmail = async (req, res) => {
-  const { email } = req.params;
-  if (!email) {
-    res.status(400).json({ message: "Product information is missing" });
-    return;
-  }
-  try {
-    const cartItems = await CartModel.find({ email });
-    if (!cartItems) {
-      return res.status(404).json({ message: "No cart items found" });
-    }
-    return res.json(cartItems);
-  } catch (error) {
-    return res.status(500).json({
-      message: error.message || "Something went wrong while getting cart items",
-    });
-  }
-};
-
-exports.updateCartItem = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const cart = await CartModel.findByIdAndUpdate(id, req.body, {
-      new: true,
-      useFindAndModify: false,
-    });
-    if (!cart) {
-      return res.status(404).json({ message: "Cart item not found" });
-    }
-    res.json(cart);
-  } catch (error) {
-    return res.status(500).json({
-      message: error.message || "Something went wrong while updating cart item",
-    });
-  }
-};
-
-exports.deleteCartItemById = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const cartItem = await CartModel.findByIdAndDelete(id);
-    if (!cartItem) {
-      return res.status(404).json({ message: "Cart item not found" });
-    }
-    res.json({ message: "Cart item deleted successfully" });
-  } catch (error) {
-    return res.status(500).json({
-      message:
-        error.message || "Something went wrong while deleting cart item by id",
-    });
-  }
-};
-
-exports.clearCAllItem = async (req, res) => {
+// 📌 DELETE /cart - ลบสินค้าทั้งหมดในตะกร้า
+exports.deleteAllCarts = async (req, res) => {
   const { email } = req.params;
   try {
-    const cart = await CartModel.deleteMany({ email });
-    if (cart.deletedCount === 0) {
-      return res.status(404).json({ message: "cart cleared successfully" });
+    const result = await CartModel.deleteMany({ email });
+
+    if (result.deletedCount > 0) {
+      return res.json({ message: "All cart items removed!" });
+    } else {
+      return res.json({ message: "No cart items found." });
     }
-    if (!cart) {
-      return res.status(404).json({ message: "cart not found" });
-    }
-    res.status(200).json({ message: "Cart is Empty" });
   } catch (error) {
-    return res.status(500).json({
-      message:
-        error.message ||
-        "Something error occurred while clearing shopping cart",
-    });
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to delete cart items." });
+  }
+};
+
+// 📌 GET /cart/{email} - ดึงสินค้าทั้งหมดของผู้ใช้ตามอีเมล
+exports.getCartsByEmail = async (req, res) => {
+  try {
+    const carts = await CartModel.find({ email: req.params.email });
+    res.json(carts);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to get cart items." });
+  }
+};
+
+// 📌 PUT /cart/{id} - อัปเดตสินค้าตาม ID
+exports.updateCartById = async (req, res) => {
+  let { quantity } = req.body;
+
+  console.log("Received quantity:", quantity);
+  console.log("Type of quantity:", typeof quantity);
+
+  if (quantity === undefined || quantity === null) {
+    return res.status(400).json({ message: "Quantity is required!" });
+  }
+
+  quantity = Number(quantity); // แปลงเป็น Number
+
+  if (isNaN(quantity) || quantity < 1) {
+    return res.status(400).json({ message: "Invalid quantity!" });
+  }
+
+  try {
+    const updatedItem = await CartModel.findByIdAndUpdate(
+      req.params.id,
+      { quantity },
+      { new: true }
+    );
+
+    if (!updatedItem) {
+      return res.status(404).json({ message: "Item not found!" });
+    }
+
+    res.json(updatedItem);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to update cart item." });
+  }
+};
+
+// 📌 DELETE /cart/{id} - ลบสินค้าตาม ID
+exports.deleteCartById = async (req, res) => {
+  try {
+    const item = await CartModel.findByIdAndDelete(req.params.id);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found!" });
+    }
+    res.status(200).json({ message: "Item deleted successfully!" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: error.message || "Failed to delete cart item." });
   }
 };
