@@ -9,7 +9,7 @@
     "start": "node index.js",
     "swagger": "node ./docs/swagger.js"
   },
-  "author": "sakkarin",
+  "author": "eakkachai",
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.1.1",
