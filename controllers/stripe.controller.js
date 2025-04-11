@@ -137,13 +137,20 @@ const createOrder = async (customer, data) => {
 
 exports.webhook = async (req, res) => {
   console.log("Webhook is called!");
+  console.log("Request body:", req.body);
+  console.log("Stripe signature:", req.headers["stripe-signature"]);
+  
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  console.log("Using webhook secret:", endpointSecret);
+  
   const sig = req.headers["stripe-signature"];
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    console.log("Event constructed successfully:", event.type);
   } catch (err) {
+    console.error("Webhook Error:", err.message);
     return res.status(400).send({ message: `Webhook Error: ${err.message}` });
   }
 
@@ -151,19 +158,46 @@ exports.webhook = async (req, res) => {
     case "checkout.session.completed":
       console.log("Payment received!");
       let data = event.data.object;
+      console.log("Session data:", data);
 
       try {
         const customer = await stripe.customers.retrieve(data.customer);
+        console.log("Customer data:", customer);
         await createOrder(customer, data);
+        console.log("Order created successfully");
       } catch (error) {
         console.error("Error creating order:", error);
         return res.status(500).send({ message: `Webhook Error: ${error.message}` });
       }
       break;
 
+    case "payment_intent.succeeded":
+      console.log("Payment intent succeeded!");
+      const paymentIntent = event.data.object;
+      console.log("Payment intent data:", paymentIntent);
+      break;
+
+    case "charge.succeeded":
+      console.log("Charge succeeded!");
+      const charge = event.data.object;
+      console.log("Charge data:", charge);
+      break;
+
+    case "payment_intent.created":
+      console.log("Payment intent created!");
+      const createdIntent = event.data.object;
+      console.log("Created intent data:", createdIntent);
+      break;
+
+    case "charge.updated":
+      console.log("Charge updated!");
+      const updatedCharge = event.data.object;
+      console.log("Updated charge data:", updatedCharge);
+      break;
+
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
 
-  res.status(200).end(); // ส่ง response ครั้งเดียว
+  res.status(200).end();
 };
