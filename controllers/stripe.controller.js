@@ -40,7 +40,7 @@ exports.createCheckOutSession = async (req, res) => {
     };
   });
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card", "promptpay"], // Add payment method types
+    payment_method_types: ["card", "promptpay"],
     shipping_address_collection: {
       allowed_countries: ["TH"],
     },
@@ -63,7 +63,7 @@ exports.createCheckOutSession = async (req, res) => {
               value: 7,
             },
           },
-        }, // Replace with your shipping rate
+        },
       },
       {
         shipping_rate_data: {
@@ -83,31 +83,33 @@ exports.createCheckOutSession = async (req, res) => {
               value: 1,
             },
           },
-        }, // Replace with your shipping rate
+        },
       },
     ],
     phone_number_collection: {
       enabled: true,
     },
-    line_items, // Pass the line items created.
-    customer: customer.id, // Pass the customer ID created.
+    line_items,
+    customer: customer.id,
     mode: "payment",
-    success_url: `${process.env.BASE_URL}/checkout-success`,
-    cancel_url: `${process.env.BASE_URL}/cart`,
+    success_url: `${process.env.PRODUCTION_FRONTEND_URL}/checkout-success`,
+    cancel_url: `${process.env.PRODUCTION_FRONTEND_URL}/cart`,
   });
-  console.log(session);
+  
+  console.log("Success URL:", `${process.env.PRODUCTION_FRONTEND_URL}/checkout-success`);
+  console.log("Cancel URL:", `${process.env.PRODUCTION_FRONTEND_URL}/cart`);
+  console.log("Session:", session);
 
   res.send({ url: session.url });
 };
 
-const clearCart = async (email, res) => {
+const clearCart = async (email) => {
   try {
-    await CartModel.deleteMany({ email }); // ลบสินค้าทั้งหมดในตะกร้าของผู้ใช้
-    console.log("Cart Cleared successfully");
+    await CartModel.deleteMany({ email });
+    console.log("Cart Cleared successfully for email:", email);
   } catch (error) {
-    res.status(500).send({
-      message: error.message || "เกิดข้อผิดพลาดในการลบสินค้าจากตะกร้า",
-    });
+    console.error("Error clearing cart:", error);
+    throw new Error(error.message || "เกิดข้อผิดพลาดในการลบสินค้าจากตะกร้า");
   }
 }
 
@@ -137,20 +139,19 @@ const createOrder = async (customer, data) => {
 
 exports.webhook = async (req, res) => {
   console.log("Webhook is called!");
-  console.log("Request body:", req.body);
-  console.log("Stripe signature:", req.headers["stripe-signature"]);
+  console.log("Webhook body:", req.body);
+  console.log("Webhook signature:", req.headers["stripe-signature"]);
   
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  console.log("Using webhook secret:", endpointSecret);
-  
   const sig = req.headers["stripe-signature"];
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    console.log("Event constructed successfully:", event.type);
+    console.log("Event type:", event.type);
+    console.log("Event data:", event.data.object);
   } catch (err) {
-    console.error("Webhook Error:", err.message);
+    console.error("Webhook Error:", err);
     return res.status(400).send({ message: `Webhook Error: ${err.message}` });
   }
 
@@ -164,35 +165,10 @@ exports.webhook = async (req, res) => {
         const customer = await stripe.customers.retrieve(data.customer);
         console.log("Customer data:", customer);
         await createOrder(customer, data);
-        console.log("Order created successfully");
       } catch (error) {
         console.error("Error creating order:", error);
         return res.status(500).send({ message: `Webhook Error: ${error.message}` });
       }
-      break;
-
-    case "payment_intent.succeeded":
-      console.log("Payment intent succeeded!");
-      const paymentIntent = event.data.object;
-      console.log("Payment intent data:", paymentIntent);
-      break;
-
-    case "charge.succeeded":
-      console.log("Charge succeeded!");
-      const charge = event.data.object;
-      console.log("Charge data:", charge);
-      break;
-
-    case "payment_intent.created":
-      console.log("Payment intent created!");
-      const createdIntent = event.data.object;
-      console.log("Created intent data:", createdIntent);
-      break;
-
-    case "charge.updated":
-      console.log("Charge updated!");
-      const updatedCharge = event.data.object;
-      console.log("Updated charge data:", updatedCharge);
       break;
 
     default:

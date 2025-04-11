@@ -22,7 +22,10 @@ try {
   console.log("DB Connection Failed");
 }
 
-app.use(cors({ origin: BASE_URL, credentials: true }));
+app.use(cors({ 
+  origin: [process.env.LOCAL_FRONTEND_URL, process.env.PRODUCTION_FRONTEND_URL], 
+  credentials: true 
+}));
 //stripe webhook must raw body
 app.use("/api/v1/stripe/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
